@@ -84,6 +84,17 @@ def _may_grade_course(user, course_id):
         return course_id in (user.courses or [])
     return False  # students and unknown roles: deny by default
 
+def _resolve_material(raw_path):
+    """Map a user-supplied name to a regular file inside MATERIALS_DIR."""
+    try:
+        root = pathlib.Path(MATERIALS_DIR).resolve(strict=True)
+        target = (root / raw_path).resolve(strict=True)
+    except (OSError, ValueError, RuntimeError):
+        return None
+    if not target.is_relative_to(root) or not target.is_file():
+        return None
+    return target
+
 # -----------------------------------------------------------------------------
 # REST API Endpoints
 # -----------------------------------------------------------------------------
@@ -204,12 +215,11 @@ def download_file():
 
     target = _resolve_material(raw_path)
     if target is None:
-        # Same answer for missing, non-file and out-of-root paths: no oracle.
         return _error("file not found", 404)
 
     try:
         return flask.send_file(target)
-    except OSError:  # file vanished or became unreadable after the check
+    except OSError:
         return _error("file not found", 404)
 
 @app.errorhandler(Exception)
