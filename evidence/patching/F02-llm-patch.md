@@ -376,4 +376,19 @@ Role and scope:
 - admin1 updating SRS, SSD, and a new 1002/SSD row returns 200, with the new row actually created.
 
 Authorization before validation:
-- A student sending garbage JSON gets 403,
+- A student sending garbage JSON gets 403, not 400.
+- prof_srs sending an unknown student_id with course_id: "SSD" gets 403, not 400, which shows there is no enumeration oracle.
+
+Validation (400, data unchanged), run as admin:
+- Non-JSON body, JSON array, null, and missing Content-Type.
+- Missing keys.
+- student_id unknown (9999), a string "1001", true, and 1001.0.
+- course_id unknown ("XYZ"), a list, an int, and a lowercase "srs".
+- grade of -1, 20.01, 21, "15", true, null, NaN, and Infinity.
+- Boundaries 0, 20, and 20.0 return 200.
+
+Errors: Force an unexpected exception (e.g. monkeypatch find_grade to raise) and assert the body is exactly {"error": "internal server error"}, with no traceback or class name.
+
+Per-request check: Log in as prof_srs, mutate USERS["prof_srs"].courses to [], and assert the next update returns 403.
+
+Regression guards for the sibling endpoints once fixed: unauthenticated and cross-student reads of /grades/<id> and /profile, plus /files?path=../baseline_secure_coding_api.py and an absolute path.
