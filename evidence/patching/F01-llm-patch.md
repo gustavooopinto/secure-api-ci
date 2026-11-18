@@ -46,7 +46,7 @@ Return a unified diff, explain the control being implemented, and identify
 remaining assumptions or limitations. Suggest additional regression tests.
 
 Application source (baseline_secure_coding_api.py):
-<código do ficheiro com o patch do F02 já aplicado, como enviado ao modelo>
+(Source code sent: baseline_secure_coding_api.py with the F02 patch applied (KNOWN_COURSES, _error, _current_user, _may_grade_course, new update_grade and handle_error) and the original, unpatched download_file. Full source omitted here to avoid duplication.)
 ```
 
 ## Response
