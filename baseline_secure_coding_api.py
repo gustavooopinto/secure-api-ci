@@ -59,6 +59,30 @@ def find_grade(student_id, course_id):
             return row
     return None
 
+KNOWN_COURSES = {"SRS", "SSD"}
+MIN_GRADE = 0
+MAX_GRADE = 20
+
+
+def _error(message, status):
+    return {"error": message}, status
+
+
+def _current_user():
+    """Return the authenticated User for this request, or None."""
+    username = flask.session.get("user")
+    if not isinstance(username, str):
+        return None
+    return USERS.get(username)
+
+
+def _may_grade_course(user, course_id):
+    """Object-level check: may `user` write grades for `course_id`?"""
+    if user.role == "admin":
+        return True
+    if user.role == "professor":
+        return course_id in (user.courses or [])
+    return False  # students and unknown roles: deny by default
 
 # -----------------------------------------------------------------------------
 # REST API Endpoints
@@ -127,11 +151,38 @@ def get_grades(student_id):
 
 @app.post("/grades/update")
 def update_grade():
-    data = flask.request.get_json()
+    user = _current_user()
+    if user is None:
+        return _error("authentication required", 401)
 
-    student_id = data["student_id"]
-    course_id = data["course_id"]
-    grade = data["grade"]
+    if user.role not in ("professor", "admin"):
+        return _error("forbidden", 403)
+
+    data = flask.request.get_json(silent=True)
+    if not isinstance(data, dict):
+        return _error("request body must be a JSON object", 400)
+
+    course_id = data.get("course_id")
+    if not isinstance(course_id, str) or course_id not in KNOWN_COURSES:
+        return _error("invalid course_id", 400)
+    if not _may_grade_course(user, course_id):
+        return _error("forbidden", 403)
+
+    student_id = data.get("student_id")
+    if (
+        not isinstance(student_id, int)
+        or isinstance(student_id, bool)
+        or student_id not in STUDENT_PROFILES
+    ):
+        return _error("invalid student_id", 400)
+
+    grade = data.get("grade")
+    if (
+        not isinstance(grade, (int, float))
+        or isinstance(grade, bool)
+        or not (MIN_GRADE <= grade <= MAX_GRADE)
+    ):
+        return _error("grade must be a number between 0 and 20", 400)
 
     row = find_grade(student_id, course_id)
     if row is None:
@@ -143,16 +194,28 @@ def update_grade():
 
 @app.get("/files")
 def download_file():
+    user = _current_user()
+    if user is None:
+        return _error("authentication required", 401)
+
     raw_path = flask.request.args.get("path", "")
-    target = MATERIALS_DIR / raw_path
-    return flask.send_file(target)
+    if not raw_path:
+        return _error("path is required", 400)
+
+    target = _resolve_material(raw_path)
+    if target is None:
+        # Same answer for missing, non-file and out-of-root paths: no oracle.
+        return _error("file not found", 404)
+
+    try:
+        return flask.send_file(target)
+    except OSError:  # file vanished or became unreadable after the check
+        return _error("file not found", 404)
 
 @app.errorhandler(Exception)
 def handle_error(exc):
-    return {
-        "error": str(exc),
-        "type": exc.__class__.__name__,
-    }, 500
+    app.logger.error("unhandled error", exc_info=exc)
+    return {"error": "internal server error"}, 500
 
 
 if __name__ == "__main__":
