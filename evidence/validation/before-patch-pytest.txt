@@ -1,0 +1,254 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.7.0 -- /home/gustavo/UC/2Mano/lab04/Repositório Geral da Disciplina - 994uqgab/secure-api-ci/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/gustavo/UC/2Mano/lab04/Repositório Geral da Disciplina - 994uqgab/secure-api-ci
+collecting ... collected 15 items
+
+tests_security/test_file_access.py::test_authenticated_user_can_download_material PASSED [  6%]
+tests_security/test_file_access.py::test_unauthenticated_download_denied FAILED [ 13%]
+tests_security/test_file_access.py::test_dotdot_traversal_blocked FAILED [ 20%]
+tests_security/test_file_access.py::test_absolute_path_blocked FAILED    [ 26%]
+tests_security/test_file_access.py::test_nested_traversal_blocked FAILED [ 33%]
+tests_security/test_file_access.py::test_symlink_escape_blocked FAILED   [ 40%]
+tests_security/test_file_access.py::test_missing_file_error_does_not_leak_internal_path FAILED [ 46%]
+tests_security/test_grade_authorization.py::test_assigned_professor_can_update_grade PASSED [ 53%]
+tests_security/test_grade_authorization.py::test_admin_can_update_any_grade PASSED [ 60%]
+tests_security/test_grade_authorization.py::test_unauthenticated_update_denied_and_unchanged FAILED [ 66%]
+tests_security/test_grade_authorization.py::test_student_cannot_update_own_grade FAILED [ 73%]
+tests_security/test_grade_authorization.py::test_student_cannot_update_another_student FAILED [ 80%]
+tests_security/test_grade_authorization.py::test_professor_cannot_update_unassigned_course FAILED [ 86%]
+tests_security/test_grade_authorization.py::test_professor_cannot_create_row_in_unassigned_course FAILED [ 93%]
+tests_security/test_grade_authorization.py::test_update_denied_after_logout FAILED [100%]
+
+=================================== FAILURES ===================================
+_____________________ test_unauthenticated_download_denied _____________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+tmp_path = PosixPath('/tmp/pytest-of-gustavo/pytest-3/test_unauthenticated_download_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7978342c1c10>
+
+    def test_unauthenticated_download_denied(client, tmp_path, monkeypatch):
+        setup_materials(tmp_path, monkeypatch)
+        response = client.get("/files", query_string={"path": "notes.txt"})
+>       assert response.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_file_access.py:45: AssertionError
+________________________ test_dotdot_traversal_blocked _________________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+tmp_path = PosixPath('/tmp/pytest-of-gustavo/pytest-3/test_dotdot_traversal_blocked0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797834061e20>
+
+    def test_dotdot_traversal_blocked(client, tmp_path, monkeypatch):
+        setup_materials(tmp_path, monkeypatch)
+        login(client, "alice", "alicepw")
+>       assert_denied(client.get("/files", query_string={"path": "../secret.txt"}))
+
+tests_security/test_file_access.py:51: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+response = <WrapperTestResponse streamed [200 OK]>
+
+    def assert_denied(response):
+>       assert 400 <= response.status_code < 500
+E       assert 400 <= 200
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_file_access.py:26: AssertionError
+__________________________ test_absolute_path_blocked __________________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+tmp_path = PosixPath('/tmp/pytest-of-gustavo/pytest-3/test_absolute_path_blocked0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797833f15b20>
+
+    def test_absolute_path_blocked(client, tmp_path, monkeypatch):
+        setup_materials(tmp_path, monkeypatch)
+        login(client, "alice", "alicepw")
+        outside = str(tmp_path / "secret.txt")
+>       assert_denied(client.get("/files", query_string={"path": outside}))
+
+tests_security/test_file_access.py:58: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+response = <WrapperTestResponse streamed [200 OK]>
+
+    def assert_denied(response):
+>       assert 400 <= response.status_code < 500
+E       assert 400 <= 200
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_file_access.py:26: AssertionError
+________________________ test_nested_traversal_blocked _________________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+tmp_path = PosixPath('/tmp/pytest-of-gustavo/pytest-3/test_nested_traversal_blocked0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797833f16210>
+
+    def test_nested_traversal_blocked(client, tmp_path, monkeypatch):
+        # Passes a naive startswith("..") check: starts inside, escapes later.
+        setup_materials(tmp_path, monkeypatch)
+        login(client, "alice", "alicepw")
+>       assert_denied(client.get("/files", query_string={"path": "sub/../../secret.txt"}))
+
+tests_security/test_file_access.py:67: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+response = <WrapperTestResponse streamed [200 OK]>
+
+    def assert_denied(response):
+>       assert 400 <= response.status_code < 500
+E       assert 400 <= 200
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_file_access.py:26: AssertionError
+_________________________ test_symlink_escape_blocked __________________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+tmp_path = PosixPath('/tmp/pytest-of-gustavo/pytest-3/test_symlink_escape_blocked0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797833f16720>
+
+    def test_symlink_escape_blocked(client, tmp_path, monkeypatch):
+        materials = setup_materials(tmp_path, monkeypatch)
+        os.symlink(tmp_path / "secret.txt", materials / "link.txt")
+        login(client, "alice", "alicepw")
+>       assert_denied(client.get("/files", query_string={"path": "link.txt"}))
+
+tests_security/test_file_access.py:74: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+response = <WrapperTestResponse streamed [200 OK]>
+
+    def assert_denied(response):
+>       assert 400 <= response.status_code < 500
+E       assert 400 <= 200
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_file_access.py:26: AssertionError
+_____________ test_missing_file_error_does_not_leak_internal_path ______________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+tmp_path = PosixPath('/tmp/pytest-of-gustavo/pytest-3/test_missing_file_error_does_n0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x797833f4a3f0>
+
+    def test_missing_file_error_does_not_leak_internal_path(client, tmp_path, monkeypatch):
+        setup_materials(tmp_path, monkeypatch)
+        login(client, "alice", "alicepw")
+        response = client.get("/files", query_string={"path": "nope.txt"})
+>       assert 400 <= response.status_code < 500
+E       assert 500 < 500
+E        +  where 500 = <WrapperTestResponse streamed [500 INTERNAL SERVER ERROR]>.status_code
+
+tests_security/test_file_access.py:81: AssertionError
+_______________ test_unauthenticated_update_denied_and_unchanged _______________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+
+    def test_unauthenticated_update_denied_and_unchanged(client):
+        before = grade_of(1001, "SRS")
+        response = client.post(
+            "/grades/update",
+            json={"student_id": 1001, "course_id": "SRS", "grade": 20},
+        )
+>       assert response.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_grade_authorization.py:49: AssertionError
+_____________________ test_student_cannot_update_own_grade _____________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+
+    def test_student_cannot_update_own_grade(client):
+        login(client, "alice", "alicepw")
+        before = grade_of(1001, "SRS")
+        response = client.post(
+            "/grades/update",
+            json={"student_id": 1001, "course_id": "SRS", "grade": 20},
+        )
+>       assert response.status_code == 403
+E       assert 200 == 403
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_grade_authorization.py:60: AssertionError
+__________________ test_student_cannot_update_another_student __________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+
+    def test_student_cannot_update_another_student(client):
+        login(client, "alice", "alicepw")
+        before = grade_of(1002, "SRS")
+        response = client.post(
+            "/grades/update",
+            json={"student_id": 1002, "course_id": "SRS", "grade": 0},
+        )
+>       assert response.status_code == 403
+E       assert 200 == 403
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_grade_authorization.py:71: AssertionError
+________________ test_professor_cannot_update_unassigned_course ________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+
+    def test_professor_cannot_update_unassigned_course(client):
+        login(client, "prof_srs", "profpw")
+        before = grade_of(1001, "SSD")
+        response = client.post(
+            "/grades/update",
+            json={"student_id": 1001, "course_id": "SSD", "grade": 20},
+        )
+>       assert response.status_code == 403
+E       assert 200 == 403
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_grade_authorization.py:82: AssertionError
+____________ test_professor_cannot_create_row_in_unassigned_course _____________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+
+    def test_professor_cannot_create_row_in_unassigned_course(client):
+        # No (1002, SSD) row exists: a patch that only protects existing rows fails here.
+        login(client, "prof_srs", "profpw")
+        count = len(api.GRADES)
+        response = client.post(
+            "/grades/update",
+            json={"student_id": 1002, "course_id": "SSD", "grade": 20},
+        )
+>       assert response.status_code == 403
+E       assert 200 == 403
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_grade_authorization.py:96: AssertionError
+_______________________ test_update_denied_after_logout ________________________
+
+client = <FlaskClient <Flask 'baseline_secure_coding_api'>>
+
+    def test_update_denied_after_logout(client):
+        login(client, "prof_srs", "profpw")
+        client.post("/logout")
+        before = grade_of(1001, "SRS")
+        response = client.post(
+            "/grades/update",
+            json={"student_id": 1001, "course_id": "SRS", "grade": 20},
+        )
+>       assert response.status_code == 401
+E       assert 200 == 401
+E        +  where 200 = <WrapperTestResponse streamed [200 OK]>.status_code
+
+tests_security/test_grade_authorization.py:109: AssertionError
+=========================== short test summary info ============================
+FAILED tests_security/test_file_access.py::test_unauthenticated_download_denied
+FAILED tests_security/test_file_access.py::test_dotdot_traversal_blocked - as...
+FAILED tests_security/test_file_access.py::test_absolute_path_blocked - asser...
+FAILED tests_security/test_file_access.py::test_nested_traversal_blocked - as...
+FAILED tests_security/test_file_access.py::test_symlink_escape_blocked - asse...
+FAILED tests_security/test_file_access.py::test_missing_file_error_does_not_leak_internal_path
+FAILED tests_security/test_grade_authorization.py::test_unauthenticated_update_denied_and_unchanged
+FAILED tests_security/test_grade_authorization.py::test_student_cannot_update_own_grade
+FAILED tests_security/test_grade_authorization.py::test_student_cannot_update_another_student
+FAILED tests_security/test_grade_authorization.py::test_professor_cannot_update_unassigned_course
+FAILED tests_security/test_grade_authorization.py::test_professor_cannot_create_row_in_unassigned_course
+FAILED tests_security/test_grade_authorization.py::test_update_denied_after_logout
+========================= 12 failed, 3 passed in 0.22s =========================
